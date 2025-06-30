@@ -5,7 +5,7 @@ CONF="/etc/snell/snell-server.conf"
 SYSTEMD="/etc/systemd/system/snell.service"
 apt-get install unzip -y
 cd ~/
-wget --no-check-certificate -O snell.zip https://dl.nssurge.com/snell/snell-server-v4.1.1-linux-amd64.zip
+wget --no-check-certificate -O snell.zip https://dl.nssurge.com/snell/snell-server-v5.0.0b1-linux-amd64.zip
 unzip -o snell.zip
  rm -f snell.zip
  chmod +x snell-server
@@ -22,9 +22,9 @@ unzip -o snell.zip
    mkdir /etc/snell/
    echo "Generating new config..."
    echo "[snell-server]" >>${CONF}
-   echo "listen = 0.0.0.0:13254" >>${CONF}
+   echo "listen = 0.0.0.0:31568" >>${CONF}
    echo "psk = ${PSK}" >>${CONF}
-   echo "obfs = tls" >>${CONF}
+   echo "obfs = http" >>${CONF}
  fi
  if [ -f ${SYSTEMD} ]; then
    echo "Found existing service..."
