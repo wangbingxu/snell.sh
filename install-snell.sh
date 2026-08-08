@@ -227,14 +227,15 @@ get_official_download_url() {
         return
     fi
 
-    # 优先匹配全架构规则 URL
+    # 优化正则表达式：精准抓取 HTML 页面中最新的版本地址
     local target_url
-    target_url=$(echo "$html" | grep -oE "https://dl\.nssurge\.com/snell/snell-server-[^\"]*-linux-${arch}\.zip" | head -n 1)
+    target_url=$(echo "$html" | grep -oE "https://dl\.nssurge\.com/snell/snell-server-v[0-9]+\.[0-9]+\.[0-9]+[^\"]*-linux-${arch}\.zip" | head -n 1)
 
     if [ -z "$target_url" ]; then
-        # 兼容备用架构命名规则
-        target_url=$(echo "$html" | grep -oE "https://dl\.nssurge\.com/snell/snell-server-[^\"]*\.zip" | grep -i "$arch" | head -n 1)
+        # 回退通用匹配
+        target_url=$(echo "$html" | grep -oE "https://dl\.nssurge\.com/snell/snell-server-[^\"]*${arch}\.zip" | head -n 1)
     fi
+
 
     echo "$target_url"
 }
@@ -373,7 +374,7 @@ upgrade_snell() {
 
     local download_url
     download_url=$(resolve_snell_url)
-    if [ $? -ne 0 ]; then
+    if [ $? -ne 0 ] || [ -z "$download_url" ]; then
         ui_msgbox "错误" "未指定有效的下载 URL，升级已取消。"
         return 1
     fi
@@ -409,6 +410,7 @@ upgrade_snell() {
     log_success "二进制文件替换成功 (原配置文件 $CONF_PATH 已完全保留)。"
 
     if check_systemd; then
+        systemctl enable ${SERVICE_NAME}.service
         systemctl start ${SERVICE_NAME}.service
     fi
 
@@ -436,7 +438,9 @@ LimitNOFILE=65535
 [Install]
 WantedBy=multi-user.target
 EOF
-    log_success "systemd 服务配置创建完成"
+    systemctl daemon-reload
+    systemctl enable ${SERVICE_NAME}.service
+    log_success "systemd 服务配置创建完成并已设置开机自启"
 }
 
 edit_config() {
