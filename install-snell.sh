@@ -107,17 +107,21 @@ ui_yesno() {
     local prompt="$2"
 
     if tui_enabled; then
-        $TUI_TOOL --title "$title" --yesno "$prompt" 12 75
+        # whiptail / dialog 支持在字符串中使用 \n 折行
+        $TUI_TOOL --title "$title" --yesno "$(echo -e "$prompt")" 12 75
         return $?
     fi
 
     local confirm
-    read -r -p "$prompt (Y/n): " confirm >&2
+    echo
+    echo -e "$prompt" >&2
+    read -r -p "(Y/n): " confirm >&2
     if [[ $confirm =~ ^[Nn]$ ]]; then
         return 1
     fi
     return 0
 }
+
 
 ui_msgbox() {
     local title="$1"
@@ -409,14 +413,20 @@ upgrade_snell() {
 
     log_success "二进制文件替换成功 (原配置文件 $CONF_PATH 已完全保留)。"
 
+    # 确保服务平滑重启（包含 enable 确保自启）
     if check_systemd; then
-        systemctl enable ${SERVICE_NAME}.service
-        systemctl start ${SERVICE_NAME}.service
+        log_step "正在重启 Snell 服务以应用新版本..."
+        systemctl enable ${SERVICE_NAME}.service >/dev/null 2>&1
+        systemctl restart ${SERVICE_NAME}.service
     fi
 
-    if ui_yesno "升级完成" "Snell 核心升级成功！\n\n是否需要现在编辑配置文件 ($CONF_PATH)？"; then
+    # 询问是否编辑配置，选 N (否) 也不影响服务的正常运行与重启
+    if ui_yesno "升级完成" "Snell 核心已成功升级并已重启生效！\n\n是否需要现在编辑配置文件 ($CONF_PATH)？"; then
         edit_config
+    else
+        ui_msgbox "升级完成" "Snell 服务运行中，更新流程全部完成。"
     fi
+
 }
 
 create_systemd_service() {
